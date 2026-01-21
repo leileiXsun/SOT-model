@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subject-Object-Tension Model | 2026 Leilei</title>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 React 和 Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入 html2canvas 用于截图下载 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        .animate-spin-slow { animation: spin 3s linear infinite; }
+        @keyframes spin { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #F5F5F5; }
+        /* 隐藏滚动条以获得更好的截图效果 */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- 图标组件定义 ---
+        const IconWrapper = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const ArrowDown = (props) => <IconWrapper {...props}><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></IconWrapper>;
+        const MoveDown = (props) => <IconWrapper {...props}><path d="M8 18L12 22L16 18"/><path d="M12 2V22"/></IconWrapper>;
+        const Zap = (props) => <IconWrapper {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconWrapper>;
+        const Battery = (props) => <IconWrapper {...props}><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/></IconWrapper>;
+        const Activity = (props) => <IconWrapper {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></IconWrapper>;
+        const Box = (props) => <IconWrapper {...props}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/></IconWrapper>;
+        const User = (props) => <IconWrapper {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconWrapper>;
+        const RefreshCw = (props) => <IconWrapper {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></IconWrapper>;
+        const Layers = (props) => <IconWrapper {...props}><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></IconWrapper>;
+        const Monitor = (props) => <IconWrapper {...props}><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></IconWrapper>;
+        const CheckCircle2 = (props) => <IconWrapper {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconWrapper>;
+        const AlertTriangle = (props) => <IconWrapper {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></IconWrapper>;
+        const Fingerprint = (props) => <IconWrapper {...props}><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M15.4 12a4 4 0 0 0-8 0"/><path d="M2 12c0-5.5 4.5-10 10-10s10 4.5 10 10a10 10 0 0 1-1.6 5.6"/><path d="M10 21v-3a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M5.5 19.5A7.5 7.5 0 0 1 5 12a7 7 0 0 1 14 0 7.5 7.5 0 0 1-.5 7.5"/></IconWrapper>;
+        const ShieldCheck = (props) => <IconWrapper {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></IconWrapper>;
+        const Download = (props) => <IconWrapper {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></IconWrapper>;
+
+        // --- 主组件 ---
+        const SubjectObjectModel = () => {
+          const [isDownloading, setIsDownloading] = React.useState(false);
+
+          const handleDownload = async () => {
+            setIsDownloading(true);
+            const element = document.getElementById('model-container');
+            
+            if (element) {
+                try {
+                    // 等待一小会儿确保渲染
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    
+                    const canvas = await window.html2canvas(element, {
+                        scale: 3, // 3倍高清
+                        useCORS: true,
+                        backgroundColor: '#F5F5F5',
+                        logging: false,
+                        windowWidth: element.scrollWidth,
+                        windowHeight: element.scrollHeight
+                    });
+                    
+                    const link = document.createElement('a');
+                    link.download = 'Subject-Object-Tension-Model-2026.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } catch (err) {
+                    console.error("Download failed:", err);
+                    alert("图片生成失败，请重试");
+                }
+            }
+            setIsDownloading(false);
+          };
+
+          return (
+            <div className="min-h-screen bg-[#F5F5F5] text-neutral-900 font-sans p-4 md:p-8 lg:p-12">
+              <div className="max-w-7xl mx-auto space-y-12">
+                
+                {/* ================= HEADER ================= */}
+                <header className="border-b-4 border-black pb-8 flex flex-col md:flex-row justify-between items-end gap-4">
+                  <div className="space-y-4">
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter uppercase leading-none">
+                      Subject–Object–Tension Model
+                    </h1>
+                    <h2 className="text-xl md:text-3xl font-bold text-neutral-600 tracking-wide uppercase">
+                      主体–对象–张力模型
+                    </h2>
+                    <div className="pt-2">
+                      <span className="font-mono text-sm font-bold text-neutral-500 bg-neutral-200 px-3 py-1 rounded-sm">
+                        2026 · Leilei
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* 下载按钮 */}
+                  <button 
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="group flex items-center gap-2 bg-black text-white px-6 py-3 rounded-sm hover:bg-neutral-800 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                  >
+                    {isDownloading ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Download className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                    )}
+                    <span className="font-mono text-xs font-bold uppercase tracking-widest">
+                        {isDownloading ? 'Generating...' : 'Download HD Image'}
+                    </span>
+                  </button>
+                </header>
+
+                {/* ================= MODEL CONTAINER (Capture Target) ================= */}
+                <div id="model-container" className="bg-[#F5F5F5] p-4 md:p-8 -m-4 md:-m-8"> 
+                {/* 增加 padding 和负 margin 确保截图背景完整，又不影响布局 */}
+                
+                    {/* ================= PHASE 1: INITIAL STATE ================= */}
+                    <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-24 relative mb-12">
+                       <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-[#F5F5F5] p-2">
+                         <RefreshCw className="w-6 h-6 text-neutral-400 animate-spin-slow" />
+                       </div>
+                       
+                       {/* Subject */}
+                       <div className="bg-white border-2 border-black p-6 relative shadow-sm">
+                          <div className="absolute -top-3 left-6 bg-black text-white px-3 py-1 text-xs font-bold uppercase font-mono">
+                            Subject / Agent
+                          </div>
+                          <div className="flex justify-between items-start mb-4">
+                            <h2 className="text-2xl font-black uppercase">主体系统</h2>
+                            <User className="w-6 h-6 text-black" strokeWidth={1.5} />
+                          </div>
+                          <ul className="space-y-2 font-mono text-xs text-neutral-600">
+                            <li className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-black rounded-full"></span>Continuous existence / 持续存在
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-black rounded-full"></span>Reflexivity / 自反性
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-black rounded-full"></span>Temporal continuity / 时间连续性
+                            </li>
+                          </ul>
+                       </div>
+
+                       {/* Object */}
+                       <div className="bg-white border-2 border-black p-6 relative shadow-sm">
+                          <div className="absolute -top-3 left-6 bg-white border border-black px-3 py-1 text-xs font-bold uppercase font-mono">
+                            Object / Structure
+                          </div>
+                          <div className="flex justify-between items-start mb-4">
+                            <h2 className="text-2xl font-black uppercase text-neutral-700">客体结构</h2>
+                            <Box className="w-6 h-6 text-neutral-700" strokeWidth={1.5} />
+                          </div>
+                          <ul className="space-y-2 font-mono text-xs text-neutral-600">
+                            <li className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 border-2 border-black rounded-full"></span>Finite / Completable / 可完成 · 可结束
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 border-2 border-black rounded-full"></span>Task-bound / 任务绑定
+                            </li>
+                          </ul>
+                       </div>
+                    </section>
+
+                    {/* ================= EVENT: TERMINATION ================= */}
+                    <div className="flex flex-col items-center justify-center relative mb-12">
+                       <div className="h-8 w-px bg-black/20"></div>
+                       <div className="relative bg-black text-white px-6 py-2 text-xs font-black uppercase tracking-[0.2em] shadow-xl z-10">
+                         Event: Object Terminates / 对象终止
+                       </div>
+                       <div className="h-8 w-px bg-black/20"></div>
+                    </div>
+
+                    {/* ================= PHASE 2: THE GAP ================= */}
+                    <section className="bg-neutral-200 border border-neutral-300 p-8 relative overflow-hidden mb-12">
+                       <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+                         <Activity size={200} />
+                       </div>
+
+                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10 items-center">
+                          <div className="space-y-4">
+                            <div className="flex gap-4">
+                              <div className="bg-white p-3 border-l-4 border-green-500 shadow-sm flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-bold text-xs uppercase">Subject / 主体</span>
+                                  <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">ONLINE</span>
+                                </div>
+                                <ul className="text-[10px] font-mono text-neutral-600 space-y-1">
+                                  <li>Cognitive surplus / 认知冗余</li>
+                                  <li>Reflexivity active / 自反性运行</li>
+                                  <li>Time flows / 时间流动</li>
+                                </ul>
+                              </div>
+                              
+                              <div className="bg-neutral-100 p-3 border-l-4 border-neutral-400 shadow-inner flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                  <span className="font-bold text-xs uppercase text-neutral-500">Object / 对象</span>
+                                  <span className="text-[9px] font-bold bg-neutral-300 text-neutral-600 px-1.5 py-0.5 rounded-full">TERMINATED</span>
+                                </div>
+                                <ul className="text-[10px] font-mono text-neutral-400 space-y-1 line-through">
+                                  <li>Task exhausted / 课题耗尽</li>
+                                  <li>No Alignment / 无对齐</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="border-t lg:border-t-0 lg:border-l border-neutral-300 pt-6 lg:pt-0 lg:pl-8">
+                             <h2 className="text-3xl font-black uppercase leading-none mb-1">Subjective<br/>Open Tension</h2>
+                             <p className="text-lg font-bold text-neutral-600">主体未闭合张力</p>
+                             <div className="text-xs font-mono text-neutral-700 mt-2 font-bold">
+                                Source: Subject persists + Object absent (主体仍在+对象缺席)<br/>
+                                Nature: Structural consequence (结构性后果)
+                             </div>
+                          </div>
+                       </div>
+                       
+                       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-20">
+                         <div className="bg-black text-white p-1.5 rounded-full shadow-lg">
+                           <ArrowDown className="w-4 h-4 animate-bounce" />
+                         </div>
+                       </div>
+                    </section>
+
+                    {/* ================= PHASE 3: THE FOUR PATHWAYS ================= */}
+                    <div className="mt-12 mb-8 flex items-center justify-center gap-4">
+                       <div className="h-px bg-black w-8"></div>
+                       <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-neutral-500">Tension Seeks Outlet / 张力寻找出口</span>
+                       <div className="h-px bg-black w-8"></div>
+                    </div>
+
+                    <section className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start relative">
+                       
+                       {/* Visual Connectors */}
+                       <div className="hidden lg:block absolute -top-8 left-0 right-0 h-px bg-black/10 border-t border-dashed border-black/20"></div>
+                       {[12.5, 37.5, 62.5, 87.5].map(pos => (
+                         <div key={pos} className="hidden lg:block absolute -top-8 w-px h-8 bg-black/10" style={{left: `${pos}%`}}></div>
+                       ))}
+
+                       {/* === PATH A: ACTIVE NARRATIVE (Black/Green Theme) === */}
+                       <div className="flex flex-col relative group h-full">
+                          {/* 1. Header Card */}
+                          <div className="bg-black text-white p-5 border-2 border-black relative overflow-hidden z-20 min-h-[14rem] flex flex-col justify-between">
+                            <Layers className="absolute -right-4 -top-4 w-20 h-20 text-neutral-800 opacity-50 rotate-12" />
+                            <div className="flex justify-between items-start z-10 mb-2">
+                              <span className="font-black text-2xl">A</span>
+                            </div>
+                            <div className="z-10">
+                              <h3 className="text-lg font-black uppercase leading-none mb-1">Active<br/>Narrative</h3>
+                              <p className="text-xs font-bold text-neutral-300 mb-2">主动叙事</p>
+                              <div className="text-[10px] font-mono text-neutral-400 space-y-2 border-t border-neutral-700 pt-2">
+                                 <p>Attention repeatedly returns to the self — how I feel, how I changed, what this says about me.</p>
+                                 <p className="text-neutral-500">注意力不断回到“我”：我怎么了、我做得对不对、我是不是不够好。</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-6 relative"><div className="w-0.5 h-full bg-black"></div></div>
+
+                          {/* 2. Energy Gate */}
+                          <div className="bg-white border-2 border-black p-3 text-center relative shadow-md z-20">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Energy Gate</div>
+                            <div className="font-black text-base text-green-600">LOW / 低</div>
+                            <div className="text-[10px] font-mono text-neutral-800 border-t border-neutral-200 mt-1 pt-1 font-bold">
+                              Reason: Symbolic processing<br/>符号处理成本低
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-6 relative"><div className="w-0.5 h-full bg-black"></div></div>
+
+                          {/* 3. INTENT LAYER (Integrated Here) */}
+                          <div className="bg-white border-4 border-black p-4 relative shadow-xl z-20 flex-grow">
+                             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-black text-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest font-mono">
+                              Intent Layer / 意图层
+                             </div>
+                             
+                             <div className="mb-3 text-center border-b border-neutral-200 pb-2 mt-1">
+                               <h4 className="font-black text-sm uppercase flex items-center justify-center gap-2">
+                                 <Fingerprint className="w-4 h-4" />
+                                 Satisfying Intents
+                               </h4>
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-2">
+                               {[
+                                 { en: "Existence", cn: "存在稳定性" },
+                                 { en: "Control", cn: "控制感" },
+                                 { en: "Value", cn: "价值确认" },
+                                 { en: "Relationship", cn: "被看见" },
+                                 { en: "Order", cn: "秩序感" },
+                                 { en: "Continuity", cn: "连续性" },
+                               ].map((item, idx) => (
+                                 <div key={idx} className="bg-neutral-100 p-1.5 border border-neutral-200 text-center text-neutral-900">
+                                   <div className="text-[9px] font-black uppercase">{item.en}</div>
+                                   <div className="text-[9px] text-neutral-600">{item.cn}</div>
+                                 </div>
+                               ))}
+                             </div>
+                          </div>
+
+                          <div className="flex justify-center h-6 relative"><div className="w-0.5 h-full bg-black"></div></div>
+
+                          {/* 4. FINAL CLOSURE */}
+                          <div className="bg-black text-white p-5 relative text-center z-20">
+                             <ShieldCheck className="w-8 h-8 text-neutral-700 absolute top-2 right-2 opacity-30" />
+                             <h2 className="text-lg font-black uppercase leading-none mb-3">
+                                Temporary<br/>Narrative Closure
+                             </h2>
+                             <p className="text-xs font-bold text-neutral-400 mb-4 border-b border-neutral-800 pb-2">暂时性叙事闭合</p>
+                             
+                             <div className="space-y-2 text-left bg-neutral-900 p-2 rounded border border-neutral-800">
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-3 h-3 text-green-500 mt-0.5" />
+                                  <div>
+                                     <span className="block text-[10px] font-bold text-neutral-300 uppercase">Narrative tension reduced</span>
+                                     <span className="text-[9px] text-neutral-500">叙事张力下降</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <AlertTriangle className="w-3 h-3 text-yellow-500 mt-0.5" />
+                                  <div>
+                                    <span className="block text-[10px] font-bold text-neutral-300 uppercase">Subject remains open</span>
+                                    <span className="text-[9px] text-neutral-500">主体仍未闭合</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <RefreshCw className="w-3 h-3 text-blue-500 mt-0.5" />
+                                  <div>
+                                    <span className="block text-[10px] font-bold text-neutral-300 uppercase">Closure is temporary</span>
+                                    <span className="text-[9px] text-neutral-500">闭合是暂时的</span>
+                                  </div>
+                                </div>
+                             </div>
+                          </div>
+                       </div>
+
+                       {/* === PATH B: SELF-OFFLINE (Grey Theme) === */}
+                       <div className="flex flex-col relative">
+                          <div className="bg-white border-2 border-neutral-500 p-5 flex flex-col justify-between min-h-[14rem]">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-black text-xl text-neutral-500">B</span>
+                              <Monitor className="w-5 h-5 text-neutral-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold uppercase leading-none mb-1 text-neutral-700">Self<br/>Offline</h3>
+                                <p className="text-xs font-bold text-neutral-500 mb-2">自我下线</p>
+                                 <div className="text-[10px] font-mono text-neutral-500 space-y-2 border-t border-neutral-200 pt-2">
+                                    <p>Attention is handed over to external content, temporarily disconnecting inner experience.</p>
+                                    <p className="text-neutral-400">注意力被外部内容接管，内在体验暂时中断。</p>
+                                </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-neutral-400"></div></div>
+
+                          <div className="bg-neutral-100 border-2 border-neutral-400 p-3 text-center">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Energy Gate</div>
+                            <div className="font-black text-sm text-neutral-600">VERY LOW / 极低</div>
+                            <div className="text-[9px] font-mono text-neutral-600 border-t border-neutral-300 mt-1 pt-1 font-bold">
+                              Reason: Attention outsourcing<br/>注意力整体外包
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-neutral-400"></div></div>
+
+                          <div className="bg-white border-2 border-neutral-300 border-dashed p-3 text-center">
+                             <div className="text-[9px] font-bold uppercase text-neutral-400 mb-1">OUTCOME</div>
+                             <div className="text-xs font-black text-neutral-700 uppercase leading-tight mb-1">Temporary Outsourced<br/>Closure</div>
+                             <div className="text-[10px] text-neutral-500 font-bold mb-2">暂时性外包叙事闭合</div>
+                             <div className="bg-neutral-100 p-2 text-[9px] font-mono text-neutral-600">
+                               Narrative + structure both outsourced<br/>叙事与结构一并外包
+                             </div>
+                          </div>
+                       </div>
+
+                       {/* === PATH C: SELF-REPAIR (Orange Theme) === */}
+                       <div className="flex flex-col relative">
+                          <div className="bg-white border-2 border-orange-600 p-5 flex flex-col justify-between min-h-[14rem]">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-black text-xl text-orange-600">C</span>
+                              <Battery className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold uppercase leading-none mb-1 text-neutral-800">Self<br/>Repair</h3>
+                                <p className="text-xs font-bold text-orange-800 mb-2">自我修复</p>
+                                <div className="text-[10px] font-mono text-neutral-500 space-y-2 border-t border-neutral-200 pt-2">
+                                    <p>Attention rests on the body and present sensations, allowing the state to settle without interpretation.</p>
+                                    <p className="text-neutral-400">注意力回到身体和当下感受，不解释、不分析，只是让状态慢慢回落。</p>
+                                </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-orange-400"></div></div>
+
+                          <div className="bg-orange-50 border-2 border-orange-400 p-3 text-center">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-orange-800">Energy Gate</div>
+                            <div className="font-black text-sm text-orange-700">MEDIUM / 中</div>
+                            <div className="text-[9px] font-mono text-orange-900 border-t border-orange-300 mt-1 pt-1 font-bold">
+                              Reason: Bodily regulation<br/>身体调节需要训练
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-orange-400"></div></div>
+
+                          <div className="bg-white border-2 border-orange-300 border-dashed p-3 text-center">
+                             <div className="text-[9px] font-bold uppercase text-neutral-400 mb-1">OUTCOME</div>
+                             <div className="text-xs font-black text-neutral-800 uppercase leading-tight mb-1">Non-Narrative<br/>Regulation</div>
+                             <div className="text-[10px] text-neutral-600 font-bold mb-2">无叙事张力调节</div>
+                             <div className="bg-orange-50 p-2 text-[9px] font-mono text-orange-900 text-left space-y-1">
+                               <div>• Tension reduced via body<br/>(张力通过身体调节)</div>
+                               <div>• Subject remains open<br/>(主体无对象空转)</div>
+                               <div>• Recoverable state<br/>(可停留、可恢复)</div>
+                             </div>
+                          </div>
+                       </div>
+
+                       {/* === PATH D: ACTIVE STRUCTURE (Red Theme) === */}
+                       <div className="flex flex-col relative">
+                          <div className="bg-white border-2 border-red-700 p-5 flex flex-col justify-between min-h-[14rem]">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-black text-xl text-red-700">D</span>
+                              <Zap className="w-5 h-5 text-red-700" />
+                            </div>
+                             <div>
+                                <h3 className="text-lg font-bold uppercase leading-none mb-1 text-neutral-900">Active<br/>Structure</h3>
+                                <p className="text-xs font-bold text-red-800 mb-2">主动结构</p>
+                                <div className="text-[10px] font-mono text-neutral-500 space-y-2 border-t border-neutral-200 pt-2">
+                                    <p>Attention is directed toward problems, relations, and structure, focused on understanding rather than self-evaluation.</p>
+                                    <p className="text-neutral-400">注意力放在事情本身：逻辑、关系、结构。人在思考、组织、理解，而不是反复看自己。</p>
+                                </div>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-red-400"></div></div>
+
+                          <div className="bg-red-50 border-2 border-red-400 p-3 text-center">
+                            <div className="text-[10px] font-bold uppercase tracking-widest text-red-800">Energy Gate</div>
+                            <div className="font-black text-sm text-red-700">VERY HIGH / 极高</div>
+                            <div className="text-[9px] font-mono text-red-900 border-t border-red-300 mt-1 pt-1 font-bold">
+                              Reason: New structure build<br/>构建新结构高负载
+                            </div>
+                          </div>
+
+                          <div className="flex justify-center h-4 relative"><div className="w-px h-full bg-red-400"></div></div>
+
+                          <div className="bg-white border-2 border-red-300 border-dashed p-3 text-center">
+                             <div className="text-[9px] font-bold uppercase text-neutral-400 mb-1">OUTCOME</div>
+                             <div className="text-xs font-black text-neutral-800 uppercase leading-tight mb-1">Structural<br/>Overload</div>
+                             <div className="text-[10px] text-neutral-600 font-bold mb-2">结构高负载状态</div>
+                             <div className="bg-red-50 p-2 text-[9px] font-mono text-red-900 text-left space-y-1">
+                               <div>• Difficult to directly enter<br/>(难以直接承接)</div>
+                               <div>• Cannot sustain high freq<br/>(不可连续高频)</div>
+                             </div>
+                          </div>
+                       </div>
+                    </section>
+
+                    {/* ================= FOOTER ================= */}
+                    <footer className="mt-16 py-8 border-t border-neutral-300 text-center font-mono text-sm text-neutral-500 font-bold">
+                      2026 · Leilei
+                    </footer>
+                </div>
+
+              </div>
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SubjectObjectModel />);
+    </script>
+</body>
+</html>
